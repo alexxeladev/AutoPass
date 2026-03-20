@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Аккаунт — Система пропусков{% endblock %}
+{% block topbar_title %}Управление аккаунтом{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Аккаунт</div>
+        <div class="page-sub">Настройки учётной записи</div>
+    </div>
+</div>
+
+<div style="max-width: 480px;">
+
+    <!-- Current user info -->
+    <div class="card" style="margin-bottom:18px">
+        <div class="card-header"><i class="fas fa-user-shield"></i> Текущий пользователь</div>
+        <div class="card-body">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+                <div>
+                    <div class="form-label">Логин</div>
+                    <div style="font-family:'DM Mono',monospace; font-size:14px; color:var(--accent)">
+                        {{ current_user.username }}
+                    </div>
+                </div>
+                <div>
+                    <div class="form-label">Роль</div>
+                    <span class="badge badge-approved">{{ current_user.role }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change password -->
+    <div class="card">
+        <div class="card-header"><i class="fas fa-key"></i> Изменить пароль</div>
+        <div class="card-body">
+            {% if error %}
+            <div class="alert alert-danger" style="margin-bottom:16px">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+            </div>
+            {% endif %}
+            {% if success %}
+            <div class="alert alert-success" style="margin-bottom:16px">
+                <i class="fas fa-check-circle"></i> {{ success }}
+            </div>
+            {% endif %}
+
+            <form method="post" action="/users/change-password">
+                <div style="display:grid; gap:14px">
+                    <div>
+                        <label class="form-label">Текущий пароль *</label>
+                        <input type="password" class="form-control" name="current_password"
+                               placeholder="••••••••" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Новый пароль *</label>
+                        <input type="password" class="form-control" name="new_password"
+                               placeholder="Минимум 8 символов" minlength="8" required id="newPwd">
+                        <div class="form-text">Не менее 8 символов</div>
+                    </div>
+                    <div>
+                        <label class="form-label">Подтвердите новый пароль *</label>
+                        <input type="password" class="form-control" name="confirm_password"
+                               placeholder="Повторите пароль" required id="confirmPwd">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top:4px">
+                        <i class="fas fa-save"></i> Сохранить пароль
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('confirmPwd').addEventListener('input', function() {
+    const match = this.value === document.getElementById('newPwd').value;
+    this.style.borderColor = this.value ? (match ? 'var(--accent)' : 'var(--red)') : '';
+});
+</script>
+{% endblock %}

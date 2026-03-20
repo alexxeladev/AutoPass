@@ -1,0 +1,29 @@
+.env
+.env.*
+
+# SSL
+ssl.key
+ssl.crt
+*.key
+*.crt
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node (just in case)
+node_modules/
+
+# Logs / backups
+backups/
+*.log
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+.cursor/
+

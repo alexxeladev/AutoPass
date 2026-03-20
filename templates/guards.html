@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Охранники{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Охранники</div>
+        <div class="page-sub">Управление доступом в Telegram-бот охраны</div>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('addModal').style.display='flex'">
+        <i class="fas fa-plus"></i> Добавить охранника
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ФИО</th>
+                    <th>Telegram ID</th>
+                    <th>Телефон</th>
+                    <th>Статус</th>
+                    <th>Добавлен</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in guards %}
+                <tr>
+                    <td style="font-weight:600">{{ g.full_name }}</td>
+                    <td class="mono" style="color:var(--blue)">
+                        {% if g.telegram_id %}{{ g.telegram_id }}{% else %}<span style="color:var(--text-3)">—</span>{% endif %}
+                    </td>
+                    <td style="color:var(--text-2)">{{ g.phone or '—' }}</td>
+                    <td>
+                        {% if g.active %}
+                            <span class="badge badge-approved">Активен</span>
+                        {% else %}
+                            <span class="badge badge-rejected">Заблокирован</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:var(--text-3); font-size:12px">{{ g.created_at.strftime('%d.%m.%Y') }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <form method="post" action="/guards/{{ g.id }}/toggle" style="display:inline">
+                                <button class="btn btn-ghost btn-sm" title="{% if g.active %}Заблокировать{% else %}Активировать{% endif %}">
+                                    <i class="fas fa-{% if g.active %}ban{% else %}check{% endif %}"></i>
+                                </button>
+                            </form>
+                            <form method="post" action="/guards/{{ g.id }}/delete" style="display:inline"
+                                onsubmit="return confirm('Удалить охранника?')">
+                                <button class="btn btn-ghost btn-sm" style="color:var(--red)" title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align:center; padding:40px; color:var(--text-3)">
+                        <i class="fas fa-user-shield" style="font-size:32px; margin-bottom:12px; display:block"></i>
+                        Охранники не добавлены
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div style="margin-top:16px; padding:16px; background:var(--surface-2); border-radius:8px; border:1px solid var(--border)">
+    <div style="font-weight:600; margin-bottom:8px; color:var(--text-2)">
+        <i class="fas fa-info-circle" style="color:var(--blue)"></i> Как получить Telegram ID охранника
+    </div>
+    <div style="color:var(--text-3); font-size:13px; line-height:1.8">
+        1. Охранник должен написать боту <b style="color:var(--text)">@userinfobot</b> в Telegram<br>
+        2. Бот ответит сообщением с полем <b style="color:var(--text)">Id:</b> — это и есть Telegram ID<br>
+        3. Скопируйте число и вставьте при добавлении охранника
+    </div>
+</div>
+
+<!-- Модал добавления -->
+<div id="addModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center">
+    <div class="card" style="width:420px; margin:0; padding:24px">
+        <div style="font-size:16px; font-weight:700; margin-bottom:20px">Добавить охранника</div>
+        <form method="post" action="/guards/add">
+            <div class="form-group">
+                <label class="form-label">ФИО *</label>
+                <input class="form-control" name="full_name" placeholder="Иванов Иван Иванович" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Telegram ID</label>
+                <input class="form-control mono" name="telegram_id" placeholder="123456789" type="number">
+                <div style="font-size:11px; color:var(--text-3); margin-top:4px">Узнать через @userinfobot</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Телефон</label>
+                <input class="form-control" name="phone" placeholder="+7 900 000 00 00">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:20px">
+                <button type="submit" class="btn btn-primary" style="flex:1">Добавить</button>
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('addModal').style.display='none'">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
