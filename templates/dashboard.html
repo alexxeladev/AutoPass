@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Обзор — Система пропусков{% endblock %}
+{% block topbar_title %}Панель управления{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Обзор</div>
+        <div class="page-sub">Пропуска на {{ today }}</div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid">
+    <div class="stat-card blue">
+        <div class="stat-value">{{ stats.total_today }}</div>
+        <div class="stat-label">Всего сегодня</div>
+    </div>
+    <div class="stat-card green" style="cursor:pointer" onclick="loadModal('approved')">
+        <div class="stat-value">{{ stats.approved_today }}</div>
+        <div class="stat-label">Одобрено</div>
+    </div>
+    <div class="stat-card red" style="cursor:pointer" onclick="loadModal('rejected')">
+        <div class="stat-value">{{ stats.rejected_today }}</div>
+        <div class="stat-label">Отклонено</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-value" id="pending-count-stat">{{ stats.pending_total }}</div>
+        <div class="stat-label">Ожидают решения</div>
+    </div>
+</div>
+
+<!-- Two-column layout -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+
+    <!-- Active passes -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-car-side"></i>
+            Активные пропуска · {{ today }}
+        </div>
+        {% if active_passes %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Автор заявки</th>
+                        <th>Адрес</th>
+                        <th>До</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in active_passes %}
+                    <tr>
+                        <td><span class="car-num">{{ p.car_number }}</span></td>
+                        <td style="color:var(--text-2)">{{ p.guest_fullname }}</td>
+                        <td style="color:var(--text-3); font-size:12px;">
+                            д.{{ p.house }}, кв.{{ p.apartment }}
+                        </td>
+                        <td class="mono" style="font-size:12px; color:var(--accent)">
+                            {{ p.date_to.strftime('%d.%m') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-car"></i></div>
+            <div class="empty-title">Нет активных пропусков</div>
+            <div class="empty-sub">Никто не запланировал въезд на сегодня</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pending -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-inbox"></i>
+            Нерассмотренные заявки
+            <span class="badge badge-pending" style="margin-left:auto">
+                {{ pending_requests|length }}
+            </span>
+        </div>
+        {% if pending_requests %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Заявитель</th>
+                        <th>Даты</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody id="pending-table">
+                    {% for p in pending_requests %}
+                    <tr id="row-{{ p.id }}">
+                        <td><span class="car-num">{{ p.car_number }}</span></td>
+                        <td style="font-size:12px; color:var(--text-2)">
+                            {{ p.guest_fullname }}<br>
+                            <span style="color:var(--text-3)">д.{{ p.house }}, кв.{{ p.apartment }}</span>
+                        </td>
+                        <td class="mono" style="font-size:11.5px; color:var(--text-3)">
+                            {{ p.date_from.strftime('%d.%m') }}–{{ p.date_to.strftime('%d.%m') }}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <button class="btn btn-success btn-icon btn-sm"
+                                        hx-post="/api/pass/{{ p.id }}/approve"
+                                        hx-target="#row-{{ p.id }}"
+                                        hx-swap="delete"
+                                        title="Одобрить">
+                                    <i class="fas fa-check" style="font-size:11px"></i>
+                                </button>
+                                <button class="btn btn-danger btn-icon btn-sm"
+                                        hx-post="/api/pass/{{ p.id }}/reject"
+                                        hx-target="#row-{{ p.id }}"
+                                        hx-swap="delete"
+                                        title="Отклонить">
+                                    <i class="fas fa-times" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+            <div class="empty-title">Заявок нет</div>
+            <div class="empty-sub">Все заявки рассмотрены</div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Modal for approved/rejected -->
+<div class="modal fade" id="passesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Пропуска</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div style="text-align:center; padding:32px; color:var(--text-3)">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadModal(status) {
+    const labels = {approved: 'Одобренные пропуска', rejected: 'Отклонённые пропуска'};
+    document.getElementById('modalTitle').textContent = labels[status] || 'Пропуска';
+    document.getElementById('modalBody').innerHTML = '<div style="text-align:center; padding:32px; color:var(--text-3)">Загрузка...</div>';
+
+    const modal = new bootstrap.Modal(document.getElementById('passesModal'));
+    modal.show();
+
+    try {
+        const r = await fetch(`/api/passes/${status}`);
+        const rows = await r.text();
+        document.getElementById('modalBody').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Номер</th><th>Автор заявки</th><th>Даты</th><th>Статус</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    } catch (e) {
+        document.getElementById('modalBody').innerHTML = '<div style="color:var(--red);padding:16px">Ошибка загрузки</div>';
+    }
+}
+
+let lastCount = -1;
+setInterval(async () => {
+    try {
+        const r = await fetch('/api/pending-count', {credentials: 'same-origin'});
+        const d = await r.json();
+        const el = document.getElementById('pending-count-stat');
+        if (el) el.textContent = d.count;
+        const badge = document.getElementById('pending-badge');
+        if (badge) { badge.textContent = d.count; badge.className = 'nav-badge' + (d.count === 0 ? ' zero' : ''); }
+        if (lastCount === -1) { lastCount = d.count; return; }
+        if (d.count !== lastCount) { lastCount = d.count; location.reload(); }
+    } catch {}
+}, 3000);
+</script>
+{% endblock %}

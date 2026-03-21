@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Отчёты — Система пропусков{% endblock %}
+{% block topbar_title %}Отчёты{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Отчёты</div>
+        <div class="page-sub">Статистика и выгрузка данных</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:18px">
+    <div class="card-body">
+        <form method="GET" action="/reports">
+            <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap">
+                <div>
+                    <label class="form-label">С даты</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}" style="width:160px">
+                </div>
+                <div>
+                    <label class="form-label">По дату</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}" style="width:160px">
+                </div>
+                <div>
+                    <label class="form-label">Статус</label>
+                    <select name="status" class="form-select" style="width:160px">
+                        <option value="">Все статусы</option>
+                        <option value="approved" {% if status == 'approved' %}selected{% endif %}>Одобрены</option>
+                        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Отклонены</option>
+                        <option value="pending"  {% if status == 'pending'  %}selected{% endif %}>В ожидании</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Применить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid" style="margin-bottom:18px">
+    <div class="stat-card blue">
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Всего</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-value">{{ stats.approved }}</div>
+        <div class="stat-label">Одобрено</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-value">{{ stats.rejected }}</div>
+        <div class="stat-label">Отклонено</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-value">{{ stats.pending }}</div>
+        <div class="stat-label">Ожидает</div>
+    </div>
+</div>
+
+<div class="card">
+    {% if passes %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Номер</th>
+                    <th>Автор заявки</th>
+                    <th>Жилец / Адрес</th>
+                    <th>Период</th>
+                    <th>Создана</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in passes %}
+                <tr>
+                    <td class="mono" style="color:var(--text-3); font-size:12px">#{{ p.id }}</td>
+                    <td><span class="car-num">{{ p.car_number }}</span></td>
+                    <td style="color:var(--text-2)">{{ p.guest_fullname }}</td>
+                    <td style="font-size:12px">
+                        <div style="color:var(--text-2)">{{ p.resident_name }}</div>
+                        <div style="color:var(--text-3)">д.{{ p.house }}, кв.{{ p.apartment }}</div>
+                    </td>
+                    <td class="mono" style="font-size:12px; color:var(--text-2)">
+                        {{ p.date_from.strftime('%d.%m') }}–{{ p.date_to.strftime('%d.%m') }}
+                    </td>
+                    <td style="font-size:12px; color:var(--text-3)">{{ p.created_at.strftime('%d.%m %H:%M') }}</td>
+                    <td>
+                        {% if p.status == 'approved' %}<span class="badge badge-approved">Одобрен</span>
+                        {% elif p.status == 'rejected' %}<span class="badge badge-rejected">Отклонён</span>
+                        {% elif p.status == 'pending' %}<span class="badge badge-pending">Ожидает</span>
+                        {% else %}<span class="badge badge-expired">{{ p.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-chart-bar"></i></div>
+        <div class="empty-title">Нет данных за период</div>
+        <div class="empty-sub">Попробуйте изменить параметры фильтра</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

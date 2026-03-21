@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% block title %}Жильцы — Система пропусков{% endblock %}
+{% block topbar_title %}Управление жильцами{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Жильцы</div>
+        <div class="page-sub">{{ residents|length }} зарегистрированных жильцов</div>
+    </div>
+    <button class="btn btn-primary" onclick="openAdd()">
+        <i class="fas fa-plus"></i> Добавить жильца
+    </button>
+</div>
+
+<!-- Search -->
+<div class="card" style="margin-bottom:18px">
+    <div class="card-body">
+        <form method="GET" action="/residents" style="display:flex; gap:10px">
+            <input type="text" name="search" class="form-control"
+                   placeholder="Поиск по ФИО, телефону, адресу..." value="{{ search }}" style="flex:1">
+            <button type="submit" class="btn btn-ghost"><i class="fas fa-search"></i></button>
+            {% if search %}
+            <a href="/residents" class="btn btn-ghost"><i class="fas fa-times"></i></a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert" style="background:color-mix(in srgb,var(--red) 15%,var(--surface)); border:1px solid var(--red); border-radius:10px; padding:12px 16px; margin-bottom:16px; color:var(--red); display:flex; align-items:center; gap:10px">
+    <i class="fas fa-exclamation-circle"></i>
+    {% if error == 'exists' %}Жилец с таким номером телефона уже зарегистрирован.
+    {% elif error == 'phone' %}Неверный формат телефона. Используйте формат +7XXXXXXXXXX.
+    {% elif error == 'car' %}Неверный формат номера авто. Пример: А123АА77.
+    {% else %}Произошла ошибка. Попробуйте ещё раз.{% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    {% if residents %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>ФИО</th>
+                    <th>Телефон</th>
+                    <th>Адрес</th>
+                    <th>Автомобили</th>
+                    <th>С</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in residents %}
+                <tr>
+                    <td class="mono" style="color:var(--text-3); font-size:12px">{{ r.id }}</td>
+                    <td style="font-weight:600">{{ r.full_name }}</td>
+                    <td class="mono" style="font-size:12.5px; color:var(--text-2)">{{ r.phone }}</td>
+                    <td style="font-size:13px; color:var(--text-2)">д.{{ r.house }}, кв.{{ r.apartment }}</td>
+                    <td>
+                        {% if r.car_numbers %}
+                            {% for cn in r.car_numbers.split(',') %}
+                                {% if cn.strip() %}
+                                    <span class="car-num" style="margin-right:4px; display:inline-block; margin-bottom:2px">
+                                        {{ cn.strip() }}
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span style="color:var(--text-3); font-size:12px">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px; color:var(--text-3)">{{ r.created_at.strftime('%d.%m.%Y') }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-ghost btn-icon btn-sm"
+                                    onclick="openEdit({{ r.id }}, '{{ r.full_name|e }}', '{{ r.phone }}', '{{ r.house }}', '{{ r.apartment }}')"
+                                    title="Редактировать">
+                                <i class="fas fa-pencil-alt" style="font-size:11px"></i>
+                            </button>
+                            <button class="btn btn-ghost btn-icon btn-sm"
+                                    onclick="openCars({{ r.id }}, '{{ r.full_name|e }}', '{{ r.car_numbers or '' }}')"
+                                    title="Автомобили">
+                                <i class="fas fa-car" style="font-size:11px"></i>
+                            </button>
+                            <button class="btn btn-danger btn-icon btn-sm"
+                                    onclick="confirmDelete({{ r.id }}, '{{ r.full_name|e }}')"
+                                    title="Удалить">
+                                <i class="fas fa-trash" style="font-size:11px"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-users"></i></div>
+        <div class="empty-title">Нет жильцов</div>
+        <div class="empty-sub">Добавьте первого жильца</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить жильца</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/residents/add">
+                <div class="modal-body">
+                    <div style="display:grid; gap:14px">
+                        <div>
+                            <label class="form-label">ФИО *</label>
+                            <input type="text" class="form-control" name="full_name"
+                                   placeholder="Иванов Иван Иванович" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Телефон *</label>
+                            <input type="tel" class="form-control" name="phone"
+                                   placeholder="+79001234567" required>
+                            <div class="form-text">Формат: +7XXXXXXXXXX</div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+                            <div>
+                                <label class="form-label">Дом *</label>
+                                <input type="text" class="form-control" name="house" placeholder="12" required>
+                            </div>
+                            <div>
+                                <label class="form-label">Кв / участок *</label>
+                                <input type="text" class="form-control" name="apartment" placeholder="34" required>
+                            </div>
+                        </div>
+                        <div style="border-top:1px solid var(--border); padding-top:14px">
+                            <label class="form-label">Автомобили <span style="color:var(--text-3); font-weight:400; text-transform:none">(необязательно)</span></label>
+                            <div id="add-cars-list" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px"></div>
+                            <div style="display:flex; gap:8px">
+                                <input type="text" class="form-control" id="addCarInput"
+                                       placeholder="А123АА 777"
+                                       style="font-family:'DM Mono',monospace; text-transform:uppercase">
+                                <button type="button" class="btn btn-ghost" onclick="addCarToList()" style="white-space:nowrap">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div id="add-car-error" style="display:none; color:var(--red); font-size:12px; margin-top:4px"></div>
+                            <div id="add-cars-hidden"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Cars Modal -->
+<div class="modal fade" id="carsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🚗 Автомобили жильца</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="cars-resident-name" style="font-weight:600; margin-bottom:16px; color:var(--text-2)"></div>
+
+                <!-- Список текущих авто -->
+                <div id="cars-list" style="margin-bottom:20px"></div>
+
+                <!-- Добавить авто -->
+                <div style="border-top:1px solid var(--border); padding-top:16px">
+                    <label class="form-label">Добавить автомобиль</label>
+                    <form id="addCarForm" method="post" onsubmit="return validateNewCar()">
+                        <div style="display:flex; gap:8px">
+                            <input type="text" class="form-control" name="car_number" id="newCarNumber"
+                                   placeholder="А123АА 777" style="font-family:'DM Mono',monospace; text-transform:uppercase">
+                            <button type="submit" class="btn btn-primary" style="white-space:nowrap">
+                                <i class="fas fa-plus"></i> Добавить
+                            </button>
+                        </div>
+                        <div id="new-car-error" style="display:none; color:var(--red); font-size:12px; margin-top:4px"></div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать жильца</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="editForm">
+                <div class="modal-body">
+                    <div style="display:grid; gap:14px">
+                        <div>
+                            <label class="form-label">ФИО *</label>
+                            <input type="text" class="form-control" name="full_name" id="editName" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Телефон *</label>
+                            <input type="tel" class="form-control" name="phone" id="editPhone" required>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+                            <div>
+                                <label class="form-label">Дом *</label>
+                                <input type="text" class="form-control" name="house" id="editHouse" required>
+                            </div>
+                            <div>
+                                <label class="form-label">Кв / участок *</label>
+                                <input type="text" class="form-control" name="apartment" id="editApt" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAdd() {
+    // Сбрасываем состояние при каждом открытии
+    addCars.length = 0;
+    document.getElementById('add-cars-list').innerHTML = '';
+    document.getElementById('add-cars-hidden').innerHTML = '';
+    document.getElementById('addCarInput').value = '';
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+}
+
+function openEdit(id, name, phone, house, apt) {
+    document.getElementById('editForm').action = `/residents/update/${id}`;
+    document.getElementById('editName').value  = name;
+    document.getElementById('editPhone').value = phone;
+    document.getElementById('editHouse').value = house;
+    document.getElementById('editApt').value   = apt;
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+// Авто при добавлении жильца
+const addCars = [];
+
+// Формат: А123АА77 или А123АА777 (русские буквы АВЕКМНОРСТУХ)
+function isValidCarNumber(car) {
+    return /^[АВЕКМНОРСТУХ]\d{3}[АВЕКМНОРСТУХ]{2}\d{2,3}$/.test(car);
+}
+
+function addCarToList() {
+    const inp = document.getElementById('addCarInput');
+    const errEl = document.getElementById('add-car-error');
+    const car = inp.value.trim().toUpperCase().replace(/\s/g, '');
+    if (!car) return;
+    if (!isValidCarNumber(car)) {
+        errEl.textContent = 'Неверный формат. Пример: А123АА77';
+        errEl.style.display = 'block';
+        return;
+    }
+    errEl.style.display = 'none';
+    if (addCars.includes(car)) { inp.value = ''; return; }
+    addCars.push(car);
+    inp.value = '';
+    renderAddCars();
+}
+
+function removeAddCar(car) {
+    const idx = addCars.indexOf(car);
+    if (idx !== -1) addCars.splice(idx, 1);
+    renderAddCars();
+}
+
+function renderAddCars() {
+    const list = document.getElementById('add-cars-list');
+    const hidden = document.getElementById('add-cars-hidden');
+    list.innerHTML = addCars.map(car => `
+        <span style="display:inline-flex; align-items:center; gap:6px; background:var(--surface-3);
+              border:1px solid var(--border); border-radius:6px; padding:4px 10px;
+              font-family:'DM Mono',monospace; font-size:12px">
+            ${car}
+            <span onclick="removeAddCar('${car}')" style="cursor:pointer; color:var(--red)">×</span>
+        </span>`).join('');
+    hidden.innerHTML = addCars.map(car =>
+        `<input type="hidden" name="car_numbers" value="${car}">`).join('');
+}
+
+// При сабмите формы добавляем авто напрямую
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('#addModal form');
+    if (form) {
+        form.addEventListener('submit', () => {
+            // Добавляем авто из поля ввода если пользователь не нажал «+»
+            const carInp = document.getElementById('addCarInput');
+            if (carInp && carInp.value.trim()) {
+                const car = carInp.value.trim().toUpperCase().replace(/\s/g, '');
+                if (isValidCarNumber(car) && !addCars.includes(car)) addCars.push(car);
+            }
+            // Удаляем старые скрытые поля
+            form.querySelectorAll('input[name="car_numbers"]').forEach(e => e.remove());
+            // Добавляем актуальные
+            addCars.forEach(car => {
+                const inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'car_numbers';
+                inp.value = car;
+                form.appendChild(inp);
+            });
+        });
+    }
+});
+
+// auto-uppercase для поля авто в форме добавления
+document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('addCarInput');
+    if (inp) {
+        inp.addEventListener('input', () => {
+            const p = inp.selectionStart;
+            inp.value = inp.value.toUpperCase();
+            inp.setSelectionRange(p, p);
+        });
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); addCarToList(); }
+        });
+    }
+});
+
+function openCars(id, name, carsStr) {
+    document.getElementById('cars-resident-name').textContent = name;
+    document.getElementById('addCarForm').action = `/residents/${id}/cars/add`;
+    document.getElementById('newCarNumber').value = '';
+
+    // Отображаем текущие авто
+    const list = document.getElementById('cars-list');
+    const cars = carsStr ? carsStr.split(',').map(c => c.trim()).filter(Boolean) : [];
+
+    if (cars.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-3); font-size:13px">Нет зарегистрированных автомобилей</div>';
+    } else {
+        list.innerHTML = cars.map(car => `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)">
+                <span class="car-num">${car}</span>
+                <form method="post" action="/residents/${id}/cars/delete" style="margin:0">
+                    <input type="hidden" name="car_number" value="${car}">
+                    <button type="submit" class="btn btn-danger btn-icon btn-sm" title="Удалить">
+                        <i class="fas fa-times" style="font-size:11px"></i>
+                    </button>
+                </form>
+            </div>`).join('');
+    }
+
+    // auto-uppercase
+    const inp = document.getElementById('newCarNumber');
+    inp.oninput = () => { const p = inp.selectionStart; inp.value = inp.value.toUpperCase(); inp.setSelectionRange(p,p); };
+
+    const modal = new bootstrap.Modal(document.getElementById('carsModal'));
+    modal.show();
+
+    // После добавления авто — перезагружаем страницу чтобы обновить список
+    document.getElementById('addCarForm').onsubmit = function() {
+        setTimeout(() => { location.reload(); }, 500);
+    };
+}
+
+function validateNewCar() {
+    const inp = document.getElementById('newCarNumber');
+    const errEl = document.getElementById('new-car-error');
+    const car = inp.value.trim().toUpperCase().replace(/\s/g, '');
+    if (!isValidCarNumber(car)) {
+        errEl.textContent = 'Неверный формат. Пример: А123АА77';
+        errEl.style.display = 'block';
+        return false;
+    }
+    errEl.style.display = 'none';
+    inp.value = car;
+    return true;
+}
+
+function confirmDelete(id, name) {
+    if (!confirm(`Удалить жильца "${name}"?\n\nЭто действие нельзя отменить.`)) return;
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = `/residents/delete/${id}`;
+    document.body.appendChild(f); f.submit();
+}
+</script>
+{% endblock %}

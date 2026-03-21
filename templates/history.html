@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}История — Система пропусков{% endblock %}
+{% block topbar_title %}История пропусков{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">История</div>
+        <div class="page-sub">Все пропуска за выбранный период</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:18px">
+    <div class="card-body">
+        <form method="GET" action="/history">
+            <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap">
+                <div>
+                    <label class="form-label">С даты</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}" style="width:160px">
+                </div>
+                <div>
+                    <label class="form-label">По дату</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}" style="width:160px">
+                </div>
+                <div style="flex:1; min-width:200px">
+                    <label class="form-label">Поиск</label>
+                    <input type="text" name="search" class="form-control"
+                           placeholder="Номер авто, ФИО, адрес..." value="{{ search }}">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Применить
+                </button>
+                {% if search or date_from or date_to %}
+                <a href="/history" class="btn btn-ghost">Сбросить</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    {% if passes %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Номер</th>
+                    <th>Автор заявки</th>
+                    <th>Жилец</th>
+                    <th>Адрес</th>
+                    <th>Период</th>
+                    <th>Создана</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in passes %}
+                <tr>
+                    <td class="mono" style="color:var(--text-3); font-size:12px">#{{ p.id }}</td>
+                    <td><span class="car-num">{{ p.car_number }}</span></td>
+                    <td style="color:var(--text-2); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+                        {{ p.guest_fullname }}
+                    </td>
+                    <td style="font-size:12px; color:var(--text-2)">{{ p.resident_name }}</td>
+                    <td style="font-size:12px; color:var(--text-3)">д.{{ p.house }}, кв.{{ p.apartment }}</td>
+                    <td class="mono" style="font-size:12px; color:var(--text-2)">
+                        {{ p.date_from.strftime('%d.%m') }}–{{ p.date_to.strftime('%d.%m') }}
+                    </td>
+                    <td style="font-size:12px; color:var(--text-3)">
+                        {{ p.created_at.strftime('%d.%m %H:%M') }}
+                    </td>
+                    <td>
+                        {% if p.status == 'approved' %}
+                            <span class="badge badge-approved">Одобрен</span>
+                        {% elif p.status == 'rejected' %}
+                            <span class="badge badge-rejected">Отклонён</span>
+                        {% elif p.status == 'pending' %}
+                            <span class="badge badge-pending">Ожидает</span>
+                        {% else %}
+                            <span class="badge badge-expired">{{ p.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-history"></i></div>
+        <div class="empty-title">Нет данных за период</div>
+        <div class="empty-sub">Попробуйте изменить параметры фильтра</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
