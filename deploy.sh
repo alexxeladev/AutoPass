@@ -44,13 +44,13 @@ h1 "2. Токены Telegram"
 echo -e "Сейчас введи токены. Они сохранятся в файл ${BOLD}.env${RESET} на этом сервере"
 echo -e "и ${RED}никогда${RESET} не попадут в git.\n"
 
-read -p "$(echo -e ${CYAN}BOT_TOKEN${RESET}' (бот жильцов, от @BotFather): ')" BOT_TOKEN
+read -p "$(echo -e ${CYAN}BOT_TOKEN${RESET}' (бот жильцов, от @BotFather): ')" BOT_TOKEN </dev/tty
 [ -z "$BOT_TOKEN" ] && err "BOT_TOKEN не может быть пустым"
 
-read -p "$(echo -e ${CYAN}GUARD_BOT_TOKEN${RESET}' (бот охраны, от @BotFather): ')" GUARD_BOT_TOKEN
+read -p "$(echo -e ${CYAN}GUARD_BOT_TOKEN${RESET}' (бот охраны, от @BotFather): ')" GUARD_BOT_TOKEN </dev/tty
 [ -z "$GUARD_BOT_TOKEN" ] && err "GUARD_BOT_TOKEN не может быть пустым"
 
-read -p "$(echo -e ${CYAN}SECURITY_CHAT_ID${RESET}' (Telegram ID охранника, от @userinfobot): ')" SECURITY_CHAT_ID
+read -p "$(echo -e ${CYAN}SECURITY_CHAT_ID${RESET}' (Telegram ID охранника, от @userinfobot): ')" SECURITY_CHAT_ID </dev/tty
 [ -z "$SECURITY_CHAT_ID" ] && err "SECURITY_CHAT_ID не может быть пустым"
 
 ok "Токены получены"
