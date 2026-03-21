@@ -66,8 +66,10 @@ bash install.sh
 h1 "4. Сохранение токенов в .env"
 # ============================================================
 
-# install.sh создал .env с DATABASE_URL и JWT_SECRET_KEY
-# Дописываем токены которые ввёл пользователь
+# Если install.sh создал .env.new — используем его, иначе .env
+ENV_FILE=".env"
+[ -f ".env.new" ] && ENV_FILE=".env.new" && mv .env.new .env
+
 sed -i "s|^BOT_TOKEN=.*|BOT_TOKEN=${BOT_TOKEN}|" .env
 sed -i "s|^GUARD_BOT_TOKEN=.*|GUARD_BOT_TOKEN=${GUARD_BOT_TOKEN}|" .env
 sed -i "s|^SECURITY_CHAT_ID=.*|SECURITY_CHAT_ID=${SECURITY_CHAT_ID}|" .env
