@@ -23,7 +23,7 @@ h1 "1. Скачивание кода с GitHub"
 # ============================================================
 
 REPO_URL="https://github.com/alexxeladev/AutoPass.git"
-INSTALL_DIR="/home/user"
+INSTALL_DIR="/opt/autopass"
 
 if [ -d "$INSTALL_DIR/.git" ]; then
     info "Репозиторий уже есть, обновляю..."
