@@ -10,6 +10,26 @@
 **Сервер:** Ubuntu 24, VPS  
 
 ---
+## 🚀 Установка на новый сервер — одна команда
+```bash
+curl -fsSL https://raw.githubusercontent.com/alexxeladev/AutoPass/main/deploy.sh | sudo bash
+```
+
+Скрипт автоматически:
+- Скачает код с GitHub
+- Спросит токены Telegram интерактивно
+- Установит PostgreSQL, Python, все зависимости
+- Настроит systemd-сервисы и запустит всё
+
+**Требования:** Ubuntu 20.04 / 22.04 / 24.04
+
+---
+
+## 📋 Что нужно перед установкой
+
+1. Два Telegram-бота — создать у @BotFather
+2. Telegram ID охранника — узнать через @userinfobot
+---
 
 ## Архитектура
 
