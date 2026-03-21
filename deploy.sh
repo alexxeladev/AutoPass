@@ -60,7 +60,9 @@ h1 "3. Установка системы"
 # ============================================================
 
 info "Запускаю install.sh..."
-bash install.sh
+    cp "$INSTALL_DIR/schema.sql" /tmp/schema.sql
+    chmod 644 /tmp/schema.sql
+    bash "$INSTALL_DIR/install.sh"
 
 # ============================================================
 h1 "4. Сохранение токенов в .env"
