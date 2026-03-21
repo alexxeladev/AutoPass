@@ -88,7 +88,6 @@ start)
   echo -e "Веб-панель: ${CYAN}${PROTOCOL}://${LOCAL_IP}:8000${RESET}"
     echo -e "Логин: ${BOLD}admin${RESET} / ${BOLD}admin123${RESET}"
     echo ""
-    echo -e "Логи: ${CYAN}bash start.sh logs${RESET}"
     echo -e "Логин: ${BOLD}admin${RESET} / ${BOLD}admin123${RESET} ${RED}(смените пароль!)${RESET}"
     echo ""
     echo -e "Управление:"
