@@ -8,7 +8,7 @@
 
 ## Быстрая установка на новый сервер
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alexxeladev/AutoPass/main/deploy.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alexxeladev/AutoPass/main/deploy.sh | sudo bash
 ```
 
 Скрипт сам:
@@ -38,12 +38,16 @@ bot.py          — Telegram-бот жильцов
 guard_bot.py    — Telegram-бот охраны
 web_app.py      — Веб-панель (FastAPI, порт 8000)
 schema.sql      — Схема БД
-install.sh      — Установка
-deploy.sh       — Развёртывание с GitHub
+install.sh      — Установка системы
+deploy.sh       — Развёртывание с GitHub одной командой
 start.sh        — Управление сервисами
+backup.sh       — Резервное копирование
+restore.sh      — Восстановление из бэкапа
+cleanup_db.sh   — Очистка тестовых данных
+test.py         — Автотесты (30+ тестов)
 ```
 
 ## Веб-панель
 
-После установки открыть: `https://IP_СЕРВЕРА:8000`  
+После установки открыть: `http://IP_СЕРВЕРА:8000`
 Логин: `admin` / Пароль: `admin123` — **сменить сразу после входа!**
