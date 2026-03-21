@@ -89,6 +89,15 @@ start)
     echo -e "Логин: ${BOLD}admin${RESET} / ${BOLD}admin123${RESET}"
     echo ""
     echo -e "Логи: ${CYAN}bash start.sh logs${RESET}"
+    echo -e "Логин: ${BOLD}admin${RESET} / ${BOLD}admin123${RESET} ${RED}(смените пароль!)${RESET}"
+    echo ""
+    echo -e "Управление:"
+    echo -e "  ${CYAN}bash start.sh stop${RESET}        — остановить"
+    echo -e "  ${CYAN}bash start.sh restart${RESET}     — перезапустить"
+    echo -e "  ${CYAN}bash start.sh status${RESET}      — статус"
+    echo -e "  ${CYAN}bash start.sh logs web${RESET}    — логи панели"
+    echo -e "  ${CYAN}bash start.sh logs bot${RESET}    — логи бота жильцов"
+    echo -e "  ${CYAN}bash start.sh logs guard${RESET}  — логи охраны"
     ;;
 
 # ── STOP ─────────────────────────────────────────────────────
