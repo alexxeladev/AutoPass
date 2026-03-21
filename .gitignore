@@ -1,0 +1,33 @@
+# Секреты — никогда не должны попасть в git!
+.env
+
+# SSL сертификаты
+ssl.key
+ssl.crt
+
+# Бэкапы и дампы БД
+backups/
+*.tar.gz
+*.zip
+*.sql
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Логи
+*.log
+
+# Системное
+.DS_Store
+.claude/
+
+# Системные файлы домашней папки
+.bashrc
+.bash_logout
+.profile
+.Xauthority
+.sudo_as_admin_successful
+.cache/
+.ssh/

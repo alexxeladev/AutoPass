@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Заявки — Система пропусков{% endblock %}
+{% block topbar_title %}Нерассмотренные заявки{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Заявки</div>
+        <div class="page-sub">Ожидают решения охраны</div>
+    </div>
+    <span class="badge badge-pending" style="font-size:13px; padding:6px 14px">
+        {{ count }} заявок
+    </span>
+</div>
+
+<div class="card">
+    {% if passes %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Номер авто</th>
+                    <th>Автор заявки</th>
+                    <th>Жилец / Адрес</th>
+                    <th>Период</th>
+                    <th>Создана</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="pending-rows">
+                {% for p in passes %}
+                <tr id="row-{{ p.id }}">
+                    <td class="mono" style="color:var(--text-3); font-size:12px">#{{ p.id }}</td>
+                    <td><span class="car-num">{{ p.car_number }}</span></td>
+                    <td style="color:var(--text-2)">{{ p.guest_fullname }}</td>
+                    <td style="font-size:12px">
+                        <span style="color:var(--text-2)">{{ p.resident_name }}</span><br>
+                        <span style="color:var(--text-3)">д.{{ p.house }}, кв.{{ p.apartment }}</span>
+                    </td>
+                    <td class="mono" style="font-size:12px; color:var(--text-2)">
+                        {{ p.date_from.strftime('%d.%m.%Y') }}<br>{{ p.date_to.strftime('%d.%m.%Y') }}
+                    </td>
+                    <td style="font-size:12px; color:var(--text-3)">
+                        {{ p.created_at.strftime('%d.%m %H:%M') }}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-success btn-sm"
+                                    hx-post="/api/pass/{{ p.id }}/approve"
+                                    hx-target="#row-{{ p.id }}"
+                                    hx-swap="delete">
+                                <i class="fas fa-check"></i> Одобрить
+                            </button>
+                            <button class="btn btn-danger btn-sm"
+                                    hx-post="/api/pass/{{ p.id }}/reject"
+                                    hx-target="#row-{{ p.id }}"
+                                    hx-swap="delete">
+                                <i class="fas fa-times"></i> Отклонить
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-check-double"></i></div>
+        <div class="empty-title">Все заявки рассмотрены</div>
+        <div class="empty-sub">Новых заявок нет</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh table every 15s
+setInterval(async () => {
+    try {
+        const r = await fetch('/api/passes/pending');
+        document.getElementById('pending-rows').innerHTML = await r.text();
+    } catch {}
+}, 15000);
+</script>
+{% endblock %}

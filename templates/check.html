@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Проверка — Система пропусков{% endblock %}
+{% block topbar_title %}Проверка пропуска{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Проверка</div>
+        <div class="page-sub">Проверка наличия активного пропуска по номеру автомобиля</div>
+    </div>
+</div>
+
+<div style="max-width: 520px; margin: 0 auto;">
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-search"></i>
+            Введите номер автомобиля
+        </div>
+        <div class="card-body">
+            <form id="checkForm">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1">
+                        <input type="text" id="carInput" class="form-control form-control-lg"
+                               placeholder="А 123 АА 77" autocomplete="off" autofocus
+                               style="font-family:'DM Mono',monospace; letter-spacing:1px; text-transform:uppercase">
+                        <div class="form-text">Русские буквы, например: А123АА 777</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="height:46px; padding:0 20px; align-self:flex-start">
+                        Проверить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Result -->
+    <div id="result" style="margin-top:16px; display:none;"></div>
+
+    <!-- New search button -->
+    <div id="newSearchWrap" style="margin-top:12px; display:none;">
+        <button class="btn btn-ghost" style="width:100%" onclick="resetForm()">
+            <i class="fas fa-redo"></i> Новый поиск
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const form  = document.getElementById('checkForm');
+const input = document.getElementById('carInput');
+
+// Auto-uppercase input
+input.addEventListener('input', () => {
+    const pos = input.selectionStart;
+    input.value = input.value.toUpperCase();
+    input.setSelectionRange(pos, pos);
+});
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const car = input.value.trim();
+    if (!car) return;
+
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    try {
+        const fd = new FormData();
+        fd.append('car_number', car);
+        const r = await fetch('/api/check-car', { method:'POST', body:fd });
+        const data = await r.json();
+        showResult(data, car);
+    } catch {
+        showError('Ошибка соединения с сервером');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Проверить';
+    }
+});
+
+function showResult(data, car) {
+    const el = document.getElementById('result');
+    el.style.display = 'block';
+    document.getElementById('newSearchWrap').style.display = 'block';
+
+    if (data.found && !data.is_resident) {
+        const p = data.pass;
+        el.innerHTML = `
+            <div class="card" style="border-top:2px solid var(--accent)">
+                <div class="card-header" style="color:var(--accent)">
+                    <i class="fas fa-check-circle"></i>
+                    Активный пропуск найден
+                </div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                        <div>
+                            <div class="form-label">Номер автомобиля</div>
+                            <span class="car-num" style="font-size:16px; color:var(--text); background:var(--surface-3); border-color:var(--border-light)">${p.car_number}</span>
+                        </div>
+                        <div>
+                            <div class="form-label">Статус</div>
+                            <span class="badge badge-approved">Активен</span>
+                        </div>
+                        <div>
+                            <div class="form-label">Автор заявки</div>
+                            <div style="font-weight:600; color:var(--text)">${p.guest_fullname}</div>
+                        <style>.car-num{background:var(--surface-2)!important}</style>
+                        </div>
+                        <div>
+                            <div class="form-label">Жилец</div>
+                            <div style="color:var(--text)">${p.resident_name}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Адрес</div>
+                            <div style="color:var(--text-2)">д.${p.house}, кв.${p.apartment}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Период действия</div>
+                            <div class="mono" style="color:var(--accent)">${p.date_from} — ${p.date_to}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    } else if (data.found && data.is_resident) {
+        const r = data.resident;
+        el.innerHTML = `
+            <div class="card" style="border-top:2px solid var(--blue)">
+                <div class="card-header" style="color:var(--blue); font-size:15px; font-weight:700; padding:16px 18px">
+                    <i class="fas fa-home" style="font-size:16px"></i>
+                    🏠 Автомобиль жильца — ВЪЕЗД РАЗРЕШЁН
+                </div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                        <div>
+                            <div class="form-label">Номер</div>
+                            <span class="car-num" style="font-size:16px; color:var(--text); background:var(--surface-3); border-color:var(--border-light)">${r.car_number}</span>
+                        </div>
+                        <div>
+                            <div class="form-label">Владелец</div>
+                            <div style="font-weight:600; color:var(--text)">${r.resident_name}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Адрес</div>
+                            <div style="color:var(--text-2)">д.${r.house}, кв.${r.apartment}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    } else {
+        el.innerHTML = `
+            <div class="card" style="border-top:2px solid var(--red)">
+                <div class="card-header" style="color:var(--red)">
+                    <i class="fas fa-ban"></i>
+                    Пропуск не найден
+                </div>
+                <div class="card-body">
+                    <div style="color:var(--text-2); margin-bottom:10px">${data.message}</div>
+                    <div style="font-size:13px; color:var(--text-3)">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Проверьте документы у водителя или запросите разрешение у жильца.
+                    </div>
+                </div>
+            </div>`;
+    }
+}
+
+function showError(msg) {
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('result').innerHTML = `
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle"></i> ${msg}
+        </div>`;
+    document.getElementById('newSearchWrap').style.display = 'block';
+}
+
+function resetForm() {
+    form.reset();
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('newSearchWrap').style.display = 'none';
+    input.focus();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') resetForm(); });
+</script>
+{% endblock %}
