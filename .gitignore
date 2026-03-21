@@ -31,3 +31,4 @@ __pycache__/
 .sudo_as_admin_successful
 .cache/
 .ssh/
+!schema.sql
