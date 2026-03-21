@@ -91,7 +91,7 @@ h1 "Готово!"
 # ============================================================
 
 echo ""
-echo -e "  Веб-панель:  ${CYAN}https://$(curl -s ifconfig.me):8000${RESET}"
+echo -e "  Веб-панель:  см. выше"
 echo -e "  Логин:       ${BOLD}admin${RESET}"
 echo -e "  Пароль:      ${BOLD}admin123${RESET}"
 echo -e "  ${RED}Сразу смените пароль после входа!${RESET}"
