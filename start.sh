@@ -82,7 +82,10 @@ start)
 
     echo ""
     echo -e "${BOLD}Готово!${RESET}"
-    echo -e "Веб-панель: ${CYAN}http://localhost:8000${RESET}"
+    LOCAL_IP=$(hostname -I | awk '{print $1}')
+  PROTOCOL="http"
+  [ -f "ssl.crt" ] && PROTOCOL="https"
+  echo -e "Веб-панель: ${CYAN}${PROTOCOL}://${LOCAL_IP}:8000${RESET}"
     echo -e "Логин: ${BOLD}admin${RESET} / ${BOLD}admin123${RESET}"
     echo ""
     echo -e "Логи: ${CYAN}bash start.sh logs${RESET}"
