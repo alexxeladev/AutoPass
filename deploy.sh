@@ -90,12 +90,3 @@ bash start.sh
 h1 "Готово!"
 # ============================================================
 
-echo ""
-echo -e "  Веб-панель:  см. выше"
-echo -e "  Логин:       ${BOLD}admin${RESET}"
-echo -e "  Пароль:      ${BOLD}admin123${RESET}"
-echo -e "  ${RED}Сразу смените пароль после входа!${RESET}"
-echo ""
-echo -e "  Логи:        ${CYAN}bash start.sh logs web${RESET}"
-echo -e "  Статус:      ${CYAN}bash start.sh status${RESET}"
-echo ""
