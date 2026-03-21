@@ -32,3 +32,4 @@ __pycache__/
 .cache/
 .ssh/
 !schema.sql
+CLAUDE.md
