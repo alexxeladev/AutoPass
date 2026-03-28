@@ -43,7 +43,7 @@ sudo apt-get update -q
 # OpenCV системные зависимости
 sudo apt-get install -y -q \
     libglib2.0-0 \
-    libgl1-mesa-glx \
+    libgl1-mesa-dri \
     libglib2.0-dev \
     ffmpeg \
     libsm6 \
