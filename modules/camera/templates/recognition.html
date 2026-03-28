@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+{% block title %}Распознавание — Пропускная система{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0"><i class="fa fa-camera me-2"></i>Распознавание номеров</h4>
+  <div class="d-flex gap-2">
+    <span id="service-status" class="badge bg-secondary">Проверка...</span>
+    <button class="btn btn-sm btn-outline-secondary" onclick="refreshEvents()">
+      <i class="fa fa-rotate-right"></i> Обновить
+    </button>
+  </div>
+</div>
+
+<!-- Камеры -->
+<div class="row g-3 mb-4">
+  {% for cam in cameras %}
+  <div class="col-md-6">
+    <div class="card h-100" id="cam-card-{{ cam.id }}">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <i class="fa fa-video me-2 {% if cam.active %}text-success{% else %}text-secondary{% endif %}"></i>
+          <strong>{{ cam.name }}</strong>
+          <span class="text-secondary ms-2 small">{{ cam.kpp_name }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge {% if cam.direction == 'in' %}bg-success{% elif cam.direction == 'out' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+            {{ cam.direction_label }}
+          </span>
+          <span class="badge {% if cam.active %}bg-success{% else %}bg-secondary{% endif %}">
+            {% if cam.active %}Активна{% else %}Выкл{% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="card-body p-0 position-relative">
+        <!-- Превью камеры -->
+        <div class="camera-preview d-flex align-items-center justify-content-center"
+             style="height:200px; background:var(--bs-gray-900); border-radius:0;">
+          {% if cam.active %}
+            <div class="text-center text-secondary">
+              <i class="fa fa-circle-notch fa-spin fa-2x mb-2"></i>
+              <div class="small">Поток активен</div>
+            </div>
+          {% else %}
+            <div class="text-center text-secondary">
+              <i class="fa fa-video-slash fa-2x mb-2"></i>
+              <div class="small">Камера неактивна</div>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Последний распознанный номер на этой камере -->
+        <div id="last-plate-{{ cam.id }}" class="p-3" style="min-height:80px;">
+          <div class="text-secondary small">Ожидание распознавания...</div>
+        </div>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        <button class="btn btn-sm btn-primary flex-fill"
+                onclick="manualCapture({{ cam.id }}, '{{ cam.name }}')"
+                {% if not cam.active %}disabled{% endif %}>
+          <i class="fa fa-camera me-1"></i>Снять вручную
+        </button>
+        <button class="btn btn-sm btn-outline-secondary"
+                onclick="openBarrier({{ cam.id }})"
+                disabled title="Шлагбаум — в разработке">
+          <i class="fa fa-door-open me-1"></i>Шлагбаум
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if not cameras %}
+  <div class="col-12">
+    <div class="alert alert-warning">
+      <i class="fa fa-triangle-exclamation me-2"></i>
+      Камеры не настроены. Заполните <code>modules/camera/config.json</code>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Результат последнего распознавания -->
+<div id="recognition-result" class="mb-4" style="display:none;">
+  <div class="card border-0" id="result-card">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <div id="result-icon" style="font-size:3rem;"></div>
+        </div>
+        <div class="col">
+          <div class="d-flex align-items-center gap-3 mb-1">
+            <span id="result-plate"
+                  style="font-family:'DM Mono',monospace; font-size:1.8rem; font-weight:700; letter-spacing:2px;"></span>
+            <span id="result-badge" class="badge fs-6"></span>
+          </div>
+          <div id="result-details" class="text-secondary"></div>
+        </div>
+        <div class="col-auto">
+          <div id="result-barrier"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- История событий -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fa fa-clock-rotate-left me-2"></i>История распознаваний</span>
+    <small class="text-secondary">Обновляется каждые 3 сек</small>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Время</th>
+            <th>Номер</th>
+            <th>Камера</th>
+            <th>Тип</th>
+            <th>Владелец / Гость</th>
+            <th>Участок</th>
+            <th>Уверенность</th>
+          </tr>
+        </thead>
+        <tbody id="events-table">
+          {% for e in events %}
+          <tr>
+            <td class="text-secondary small">
+              {{ e.created_at.strftime('%d.%m %H:%M:%S') }}
+            </td>
+            <td>
+              <span style="font-family:'DM Mono',monospace; font-weight:600;">
+                {{ e.plate_normalized }}
+              </span>
+            </td>
+            <td class="small">
+              {% if e.camera_name %}
+                <i class="fa fa-video me-1 text-secondary"></i>{{ e.camera_name }}
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if e.match_type == 'resident' %}
+                <span class="badge bg-success">🏠 Житель</span>
+              {% elif e.match_type == 'guest' %}
+                <span class="badge bg-primary">👤 Гость</span>
+              {% else %}
+                <span class="badge bg-danger">❌ Неизвестен</span>
+              {% endif %}
+            </td>
+            <td class="small">
+              {% if e.match_type == 'resident' %}
+                {{ e.resident_name }}
+              {% elif e.match_type == 'guest' %}
+                {{ e.guest_fullname }}
+                <span class="text-secondary">(жилец: {{ e.resident_name }})</span>
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endif %}
+            </td>
+            <td class="small">
+              {% if e.house %}
+                Дом {{ e.house }}{% if e.apartment %}, кв. {{ e.apartment }}{% endif %}
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endif %}
+            </td>
+            <td class="small">
+              {% if e.confidence %}
+                <div class="d-flex align-items-center gap-1">
+                  <div class="progress flex-fill" style="height:6px; width:60px;">
+                    <div class="progress-bar
+                      {% if e.confidence >= 0.8 %}bg-success
+                      {% elif e.confidence >= 0.6 %}bg-warning
+                      {% else %}bg-danger{% endif %}"
+                      style="width:{{ (e.confidence * 100)|int }}%">
+                    </div>
+                  </div>
+                  <span>{{ (e.confidence * 100)|int }}%</span>
+                </div>
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not events %}
+          <tr>
+            <td colspan="7" class="text-center text-secondary py-4">
+              <i class="fa fa-inbox me-2"></i>Событий пока нет
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Автообновление событий ────────────────────────────────
+let autoRefreshInterval = null;
+
+async function refreshEvents() {
+  try {
+    const resp = await fetch('/api/camera/events?limit=20');
+    const data = await resp.json();
+    renderEvents(data.events || []);
+    updateCameraLastPlates(data.events || []);
+  } catch(e) {
+    console.error('Ошибка обновления:', e);
+  }
+}
+
+function renderEvents(events) {
+  const tbody = document.getElementById('events-table');
+  if (!events.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-secondary py-4">
+      <i class="fa fa-inbox me-2"></i>Событий пока нет</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = events.map(e => {
+    const typeBadge = e.match_type === 'resident'
+      ? '<span class="badge bg-success">🏠 Житель</span>'
+      : e.match_type === 'guest'
+      ? '<span class="badge bg-primary">👤 Гость</span>'
+      : '<span class="badge bg-danger">❌ Неизвестен</span>';
+
+    const owner = e.match_type === 'resident'
+      ? (e.resident_name || '—')
+      : e.match_type === 'guest'
+      ? `${e.guest_fullname || '—'} <span class="text-secondary">(жилец: ${e.resident_name || '—'})</span>`
+      : '<span class="text-secondary">—</span>';
+
+    const location = e.house
+      ? `Дом ${e.house}${e.apartment ? ', кв. ' + e.apartment : ''}`
+      : '<span class="text-secondary">—</span>';
+
+    const conf = e.confidence
+      ? `<div class="d-flex align-items-center gap-1">
+           <div class="progress flex-fill" style="height:6px;width:60px;">
+             <div class="progress-bar ${e.confidence >= 0.8 ? 'bg-success' : e.confidence >= 0.6 ? 'bg-warning' : 'bg-danger'}"
+               style="width:${Math.round(e.confidence*100)}%"></div>
+           </div>
+           <span>${Math.round(e.confidence*100)}%</span>
+         </div>`
+      : '<span class="text-secondary">—</span>';
+
+    return `<tr>
+      <td class="text-secondary small">${e.created_at}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-weight:600;">${e.plate_normalized}</span></td>
+      <td class="small">${e.camera_name ? '<i class="fa fa-video me-1 text-secondary"></i>' + e.camera_name : '<span class="text-secondary">—</span>'}</td>
+      <td>${typeBadge}</td>
+      <td class="small">${owner}</td>
+      <td class="small">${location}</td>
+      <td class="small">${conf}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Обновить "последний номер" на карточке камеры ─────────
+function updateCameraLastPlates(events) {
+  // Группируем по camera_id — берём последнее для каждой
+  const byCamera = {};
+  events.forEach(e => {
+    const key = e.camera_id;
+    if (key && !byCamera[key]) byCamera[key] = e;
+  });
+
+  Object.entries(byCamera).forEach(([camId, e]) => {
+    const el = document.getElementById(`last-plate-${camId}`);
+    if (!el) return;
+
+    const color = e.match_type === 'resident' ? 'var(--green)'
+                : e.match_type === 'guest'    ? '#4d9cf8'
+                : 'var(--red)';
+
+    el.innerHTML = `
+      <div class="d-flex align-items-center gap-2">
+        <span style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:700;color:${color}">
+          ${e.plate_normalized}
+        </span>
+        <span style="color:${color};font-size:0.85rem;">${e.status_label}</span>
+      </div>
+      <div class="text-secondary small mt-1">${e.created_at}</div>
+      ${e.resident_name ? `<div class="small mt-1">${e.resident_name}${e.house ? ' · Дом ' + e.house : ''}</div>` : ''}
+    `;
+  });
+}
+
+// ── Показать результат распознавания ─────────────────────
+function showResult(plate, matchType, data) {
+  const el = document.getElementById('recognition-result');
+  el.style.display = 'block';
+
+  const card = document.getElementById('result-card');
+  const icon = document.getElementById('result-icon');
+  const platEl = document.getElementById('result-plate');
+  const badge = document.getElementById('result-badge');
+  const details = document.getElementById('result-details');
+  const barrierDiv = document.getElementById('result-barrier');
+
+  platEl.textContent = plate;
+
+  if (matchType === 'resident') {
+    card.style.borderLeft = '4px solid var(--green)';
+    icon.textContent = '🏠';
+    badge.className = 'badge bg-success fs-6';
+    badge.textContent = 'Житель';
+    details.innerHTML = `
+      <strong>${data.resident_name}</strong> · Дом ${data.house}${data.apartment ? ', кв. ' + data.apartment : ''}
+      <span class="text-secondary ms-2">${data.phone || ''}</span>`;
+    barrierDiv.innerHTML = `<span class="badge bg-success p-2">✅ ВЪЕЗД РАЗРЕШЁН</span>`;
+  } else if (matchType === 'guest') {
+    card.style.borderLeft = '4px solid #4d9cf8';
+    icon.textContent = '👤';
+    badge.className = 'badge bg-primary fs-6';
+    badge.textContent = 'Гость';
+    details.innerHTML = `
+      Гость: <strong>${data.guest_fullname}</strong> ·
+      Жилец: ${data.resident_name} · Дом ${data.house}${data.apartment ? ', кв. ' + data.apartment : ''}<br>
+      <span class="text-secondary small">Пропуск до: ${data.date_to}</span>`;
+    barrierDiv.innerHTML = `<span class="badge bg-primary p-2">✅ ВЪЕЗД РАЗРЕШЁН</span>`;
+  } else {
+    card.style.borderLeft = '4px solid var(--red)';
+    icon.textContent = '❌';
+    badge.className = 'badge bg-danger fs-6';
+    badge.textContent = 'Неизвестен';
+    details.innerHTML = '<span class="text-secondary">Номер не найден в базе</span>';
+    barrierDiv.innerHTML = `<span class="badge bg-danger p-2">🚫 ВЪЕЗД ЗАПРЕЩЁН</span>`;
+  }
+
+  // Прокрутка к результату
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Ручной снимок ─────────────────────────────────────────
+async function manualCapture(cameraId, cameraName) {
+  const btn = event.target.closest('button');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Распознавание...';
+
+  try {
+    const resp = await fetch(`/api/camera/${cameraId}/capture`, { method: 'POST' });
+    const data = await resp.json();
+
+    if (data.error) {
+      alert('Ошибка: ' + data.error);
+      return;
+    }
+
+    if (data.results && data.results.length > 0) {
+      const r = data.results[0];
+      showResult(r.plate, r.match_type, r);
+    } else {
+      alert('Номер не распознан на снимке');
+    }
+
+    refreshEvents();
+  } catch(e) {
+    alert('Ошибка запроса: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-camera me-1"></i>Снять вручную';
+  }
+}
+
+// ── Шлагбаум (заглушка) ───────────────────────────────────
+async function openBarrier(cameraId) {
+  alert('Управление шлагбаумом будет доступно в следующей версии');
+}
+
+// ── Статус сервиса ────────────────────────────────────────
+async function checkServiceStatus() {
+  try {
+    const resp = await fetch('/api/camera/status');
+    const data = await resp.json();
+    const active = (data.cameras || []).filter(c => c.active).length;
+    const total = (data.cameras || []).length;
+    const badge = document.getElementById('service-status');
+    if (active > 0) {
+      badge.className = 'badge bg-success';
+      badge.textContent = `${active}/${total} камер активно`;
+    } else {
+      badge.className = 'badge bg-secondary';
+      badge.textContent = 'Камеры не активны';
+    }
+  } catch(e) {
+    document.getElementById('service-status').textContent = 'Нет связи';
+  }
+}
+
+// ── Запуск ────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  refreshEvents();
+  checkServiceStatus();
+  autoRefreshInterval = setInterval(refreshEvents, 3000);
+  setInterval(checkServiceStatus, 10000);
+});
+</script>
+{% endblock %}
